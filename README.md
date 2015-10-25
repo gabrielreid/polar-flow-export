@@ -1,7 +1,7 @@
 # polar-flow-export
 Command line tool for bulk exporting TCX files from [Polar Flow](https://flow.polar.com/)
 
-Requires [Python](https://www.python.org) 2.7 or later.
+Requires [Python](https://www.python.org) 2.7 or later and the [python-dateutil](https://pypi.python.org/pypi/python-dateutil) library.
 
 Usage is as follows:
 
