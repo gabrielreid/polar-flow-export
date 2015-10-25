@@ -156,7 +156,9 @@ if __name__ == '__main__':
 
     exporter = PolarFlowExporter(username, password)
     for tcx_file in exporter.get_tcx_files(from_date_str, to_date_str):
-        filename = "%s_%s.tcx" % (tcx_file.date_str, tcx_file.workout_id)
+        filename = "%s_%s.tcx" % (
+                        tcx_file.date_str.replace(':', '_'),
+                        tcx_file.workout_id)
         output_file = open(os.path.join(output_dir, filename), 'wb')
         output_file.write(tcx_file.content)
         output_file.close()
