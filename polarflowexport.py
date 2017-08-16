@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 """
 Command line tool for bulk exporting a range of TCX files from Polar Flow.
 
@@ -133,10 +135,12 @@ class PolarFlowExporter(object):
             return TcxFile(
                 activity_ref['listItemId'],
                 activity_ref['datetime'],
-                self._execute_request(
-                    "%s/export/tcx/false" % activity_ref['url']))
+                lambda :self._execute_request(
+                    "%s/export/tcx/false" % activity_ref['url'])
+                )
 
-        return (get_tcx_file(activity_ref) for activity_ref in activity_refs)
+        return (get_tcx_file(activity_ref) for activity_ref in activity_refs
+            if activity_ref['type'] not in ["TRAININGTARGET", "FITNESSDATA"])
 
 #------------------------------------------------------------------------------
 
@@ -159,8 +163,14 @@ if __name__ == '__main__':
         filename = "%s_%s.tcx" % (
                         tcx_file.date_str.replace(':', '_'),
                         tcx_file.workout_id)
-        output_file = open(os.path.join(output_dir, filename), 'wb')
-        output_file.write(tcx_file.content)
+        filepath = os.path.join(output_dir, filename)
+        if os.path.exists(filepath):
+            logging.info("skipping %s" % filename)
+            continue
+
+        content = tcx_file.content()
+        output_file = open(filepath, 'wb')
+        output_file.write(content)
         output_file.close()
         print "Wrote file %s" % filename
 
