@@ -26,7 +26,8 @@ import time
 import urllib2
 import urllib
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 class ThrottlingHandler(urllib2.BaseHandler):
     """A throttling handler which ensures that requests to a given host
@@ -42,13 +43,13 @@ class ThrottlingHandler(urllib2.BaseHandler):
         hostName = request.get_host()
         lastRequestTime = self._requestTimeDict.get(hostName, 0)
         timeSinceLast = time.time() - lastRequestTime
-        
+
         if timeSinceLast < self._throttleSeconds:
             time.sleep(self._throttleSeconds - timeSinceLast)
         self._requestTimeDict[hostName] = time.time()
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class TcxFile(object):
     def __init__(self, workout_id, date_str, content):
@@ -57,7 +58,7 @@ class TcxFile(object):
         self.content = content
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class PolarFlowExporter(object):
 
@@ -67,10 +68,10 @@ class PolarFlowExporter(object):
         self._logger = logging.getLogger(self.__class__.__name__)
 
         self._url_opener = urllib2.build_opener(
-                        ThrottlingHandler(0.5),
-                        urllib2.HTTPCookieProcessor(cookielib.CookieJar()))
-        self._url_opener.addheaders = [('User-Agent', 
-                'https://github.com/gabrielreid/polar-flow-export')]
+            ThrottlingHandler(0.5),
+            urllib2.HTTPCookieProcessor(cookielib.CookieJar()))
+        self._url_opener.addheaders = [('User-Agent',
+                                        'https://github.com/gabrielreid/polar-flow-export')]
         self._logged_in = False
 
     def _execute_request(self, path, post_params=None):
@@ -91,15 +92,15 @@ class PolarFlowExporter(object):
             self._logger.error("Error fetching %s: %s" % (url, e))
             raise Exception(e)
         response.close()
-        return data  
+        return data
 
     def _login(self):
         self._logger.info("Logging in user %s", self._username)
         self._execute_request('/')  # Start a new session
-        self._execute_request('/login', 
-            dict(returnUrl='https://flow.polar.com/', 
-                    email=self._username, password=self._password))
-        self._logged_in = True 
+        self._execute_request('/login',
+                              dict(returnUrl='https://flow.polar.com/',
+                                   email=self._username, password=self._password))
+        self._logged_in = True
         self._logger.info("Successfully logged in")
 
     def get_tcx_files(self, from_date_str, to_date_str):
@@ -108,61 +109,60 @@ class PolarFlowExporter(object):
         @param from_date_str an ISO-8601 date string
         @param to_date_str an ISO-8601 date string
         """
-        self._logger.info("Fetching TCX files from %s to %s", from_date_str, 
-                                                                to_date_str)
+        self._logger.info("Fetching TCX files from %s to %s", from_date_str,
+                          to_date_str)
         if not self._logged_in:
             self._login()
 
         from_date = dateutil.parser.parse(from_date_str)
         to_date = dateutil.parser.parse(to_date_str)
 
-        from_spec = "%s.%s.%s" % (from_date.day, from_date.month, 
-                                    from_date.year)
+        from_spec = "%s.%s.%s" % (from_date.day, from_date.month,
+                                  from_date.year)
 
-        to_spec = "%s.%s.%s" % (to_date.day, to_date.month, 
-                                    to_date.year)
+        to_spec = "%s.%s.%s" % (to_date.day, to_date.month,
+                                to_date.year)
 
         path = "/training/getCalendarEvents?start=%s&end=%s" % (
-                                                        from_spec, to_spec)
+            from_spec, to_spec)
         activity_refs = json.loads(self._execute_request(path))
 
-
         def get_tcx_file(activity_ref):
-            self._logger.info("Retrieving workout %s" 
-                                % activity_ref['listItemId'])
+            self._logger.info("Retrieving workout %s"
+                              % activity_ref['listItemId'])
             return TcxFile(
                 activity_ref['listItemId'],
                 activity_ref['datetime'],
                 self._execute_request(
-                    "%s/export/tcx/false" % activity_ref['url']))
+                    "/api/export/training/tcx/%s" % activity_ref['listItemId']))
 
         return (get_tcx_file(activity_ref) for activity_ref in activity_refs)
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
     try:
-        (username, password, from_date_str, 
+        (username, password, from_date_str,
             to_date_str, output_dir) = sys.argv[1:]
     except ValueError:
         sys.stderr.write(("Usage: %s <username> <password> <from_date> "
-            "<to_date> <output_dir>\n") % sys.argv[0])
+                          "<to_date> <output_dir>\n") % sys.argv[0])
         sys.exit(1)
-    
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     exporter = PolarFlowExporter(username, password)
     for tcx_file in exporter.get_tcx_files(from_date_str, to_date_str):
         filename = "%s_%s.tcx" % (
-                        tcx_file.date_str.replace(':', '_'),
-                        tcx_file.workout_id)
+            tcx_file.date_str.replace(':', '_'),
+            tcx_file.workout_id)
         output_file = open(os.path.join(output_dir, filename), 'wb')
         output_file.write(tcx_file.content)
         output_file.close()
         print "Wrote file %s" % filename
 
     print "Export complete"
-
