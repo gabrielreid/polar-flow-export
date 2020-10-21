@@ -134,7 +134,8 @@ class PolarFlowExporter(object):
                 activity_ref['listItemId'],
                 activity_ref['datetime'],
                 self._execute_request(
-                    "%s/export/tcx/false" % activity_ref['url']))
+                    "/api/export/training/tcx/%s" % activity_ref['listItemId'])
+            )
 
         return (get_tcx_file(activity_ref) for activity_ref in activity_refs)
 
