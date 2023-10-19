@@ -18,3 +18,5 @@ This project is not in any way affiliated with Polar or Polar Flow. It is purely
 hobby project created out of a need to export a large quantity of TCX files from 
 Polar Flow.
 """
+
+
